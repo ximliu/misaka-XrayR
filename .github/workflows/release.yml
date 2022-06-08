@@ -1,6 +1,22 @@
 name: Build and Release
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/*.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/*.yml"
   release:
     types: [published]
 
@@ -10,7 +26,7 @@ jobs:
     strategy:
       matrix:
         # Include amd64 on all platforms.
-        goos: [windows, freebsd, openbsd, linux, dragonfly, darwin]
+        goos: [windows, freebsd, linux, dragonfly, darwin]
         goarch: [amd64, 386]
         exclude:
           # Exclude i386 on darwin and dragonfly.
@@ -18,8 +34,6 @@ jobs:
             goos: dragonfly
           - goarch: 386
             goos: darwin
-          - goarch: 386
-            goos: openbsd
         include:
           # BEIGIN MacOS ARM64
           - goos: darwin
@@ -117,7 +131,6 @@ jobs:
         run: |
           cd ./build_assets || exit 1
           mv XrayR XrayR.exe
-
       - name: Prepare to release
         run: |
           cp ${GITHUB_WORKSPACE}/README.md ./build_assets/README.md
@@ -156,6 +169,12 @@ jobs:
       - name: Change the name
         run: |
           mv build_assets XrayR-$ASSET_NAME
+      - name: Upload files to Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: XrayR-${{ steps.get_filename.outputs.ASSET_NAME }}
+          path: |
+            ./XrayR-${{ steps.get_filename.outputs.ASSET_NAME }}/*
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         if: github.event_name == 'release'
